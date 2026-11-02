@@ -1,0 +1,575 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>Editor NFCShare</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* Layout: formulário em seções à esquerda, celular com prévia ao vivo à direita (empilha no celular) */
+:root{
+  --bg:#F2F5F9; --panel:#FFFFFF; --ink:#13202E; --muted:#5F6E80; --line:#DCE3EC;
+  --accent:#2B5BD7; --accent-ink:#FFFFFF; --soft:#EAF0FB; --ok:#1E8A5A;
+  --f-display:"Outfit","Avenir Next",system-ui,sans-serif;
+  --f-body:"DM Sans",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1119; --panel:#141D29; --ink:#E9EFF6; --muted:#97A6B8; --line:#26354A;
+  --accent:#6B93F5; --accent-ink:#0B1119; --soft:#1A2740; --ok:#4CC28C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1119; --panel:#141D29; --ink:#E9EFF6; --muted:#97A6B8; --line:#26354A;
+  --accent:#6B93F5; --accent-ink:#0B1119; --soft:#1A2740; --ok:#4CC28C; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:920px){.wrap{grid-template-columns:minmax(0,1fr) 400px;align-items:start}}
+header h1{font-family:var(--f-display);font-weight:700;font-size:26px;margin:0}
+header p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+.form{display:grid;gap:16px;min-width:0}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:14px}
+.sec h2{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0;display:flex;gap:10px;align-items:baseline}
+.sec h2 small{font-family:var(--f-body);font-weight:400;color:var(--muted);font-size:13px}
+.grid2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+label.f{display:grid;gap:5px;font-size:13px;font-weight:500;color:var(--muted)}
+input[type=text],input[type=email],input[type=tel],input[type=url],textarea,select{
+  font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:64px}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.photo{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.photo img,.photo .ph{width:72px;height:72px;border-radius:50%;object-fit:cover;background:var(--soft)}
+.btn{font:600 14px var(--f-body);border-radius:10px;padding:10px 14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:6px 10px;font-size:13px}
+
+.links{display:grid;gap:8px}
+.lrow{display:grid;grid-template-columns:auto 96px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg)}
+.lrow.off{opacity:.55}
+.lrow b{font-size:14px}
+.lrow .modes{display:flex;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:5px 9px;border-radius:999px;border:1px solid var(--line);cursor:pointer;user-select:none;background:var(--panel)}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip:has(input:checked){background:var(--soft);border-color:var(--accent);color:var(--accent)}
+.chip:has(input:focus-visible){outline:2px solid var(--accent)}
+.lrow .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0 4px}
+@media (max-width:560px){.lrow{grid-template-columns:auto minmax(0,1fr)}.lrow .val{grid-column:1/-1}.lrow .modes{grid-column:1/-1}}
+
+.layouts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.lay{position:relative;border:2px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;display:grid;gap:8px;justify-items:center;font-size:13px;font-weight:600;background:var(--panel)}
+.lay input{position:absolute;opacity:0}
+.lay:has(input:checked){border-color:var(--accent)}
+.lay:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.sw{width:100%;aspect-ratio:3/4;max-width:100%;border-radius:8px;overflow:hidden;display:grid;grid-template-rows:38% 1fr;background:#fff;border:1px solid #DCE3EC}
+.sw i{display:block}
+.sw.m i:first-child{background:linear-gradient(135deg,#1F4E8C,#0E2747)}
+.sw.r{grid-template-rows:62% 1fr}.sw.r i:first-child{background:linear-gradient(160deg,#2B5BD7,#173B9C)}
+.sw.c{grid-template-rows:1fr;background:#F2F5F9}.sw.c i:first-child{background:radial-gradient(circle at 30% 28%,#DCEBFB 0 18%,transparent 19%),linear-gradient(#F2F5F9,#F2F5F9)}
+.sw i:last-child{background:repeating-linear-gradient(#F2F5F9 0 6px,#E3E9F1 6px 12px)}
+.sw.c i:last-child{display:none}
+
+.pub{display:grid;gap:10px}
+.pub .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toast{font-size:13px;color:var(--ok);font-weight:600}
+ol.steps{margin:0;padding-left:20px;color:var(--muted);font-size:13px;display:grid;gap:4px}
+ol.steps b{color:var(--ink)}
+code{font-size:12.5px;background:var(--soft);padding:1px 6px;border-radius:6px;word-break:break-all}
+textarea.out{position:absolute;left:-9999px;width:1px;height:1px}
+
+.side{position:sticky;top:16px;display:grid;gap:10px;justify-items:center}
+.phone{width:100%;max-width:380px;aspect-ratio:9/18.5;border-radius:36px;border:10px solid var(--ink);overflow:hidden;background:#F2F5F9}
+.phone iframe{width:100%;height:100%;border:0;display:block}
+.side .tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.side .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (max-width:919px){.side{position:static}.phone{max-width:340px}}
+</style></head><body><style>
+.perfis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;background:var(--bg);min-width:0}
+.pcard .top{display:flex;gap:8px;align-items:center}
+.pcard .top input{font-weight:700}
+.pcard .x,.it .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:20px;padding:0 6px}
+.pcard input,.pcard textarea{background:var(--panel);padding:8px 10px;font-size:14px}
+.pcard .chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.itens{display:grid;gap:8px}
+.it{display:grid;grid-template-columns:140px minmax(0,1fr) minmax(0,1.3fr) auto auto;gap:8px;align-items:center;padding:8px;border-radius:12px;background:var(--bg)}
+.it input,.it select{padding:8px 10px;font-size:14px;background:var(--panel)}
+.it .chips{display:flex;gap:4px;flex-wrap:wrap}
+.ithead{display:grid;grid-template-columns:140px minmax(0,1fr) minmax(0,1.3fr) auto auto;gap:8px;font-size:12px;color:var(--muted);padding:0 8px}
+@media (max-width:760px){.it{grid-template-columns:1fr 1fr auto}.it .addr{grid-column:1/-1}.it .chips{grid-column:1/-1}.ithead{display:none}}
+.pubp{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--bg)}
+.pubp .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pubp b{font-size:15px}
+.switch{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.switch button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.phone{background:#0C1424}
+.qrrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.qrimg img{width:132px;height:132px;border-radius:8px;border:1px solid var(--line);background:#fff;display:block}
+.qrrow .hint{flex:1;min-width:180px}
+[hidden]{display:none!important}
+.cartoes{position:sticky;top:0;z-index:5;box-shadow:0 6px 20px rgba(19,32,46,.06)}
+.cbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.btn.danger{background:#C2412D;border-color:#C2412D;color:#fff}
+.sws{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--accent)}
+.modos{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.imgs{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.imgbox{display:grid;gap:8px}
+.capaPrev{height:76px;border-radius:12px;background:var(--soft) center/cover no-repeat;border:1px solid var(--line)}
+.logoPrev{height:76px;border-radius:12px;background:var(--soft) center/contain no-repeat;border:1px solid var(--line)}
+.pimg{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.pimg .capaPrev,.pimg .logoPrev{height:48px}
+.note{font-size:13px;padding:10px 12px;border-radius:10px;background:var(--soft);margin:0}
+</style>
+<div class="wrap">
+  <div class="form">
+    <header>
+      <h1>Editor de cartão</h1>
+      <p>Cada pessoa tem o seu cartão salvo aqui. Cada perfil vira uma página separada, e quem recebe vê só o perfil escolhido.</p>
+    </header>
+
+    <section class="sec cartoes">
+      <div class="cbar">
+        <label class="f" style="flex:1;min-width:200px">Cartão<select id="pessoaSel"></select></label>
+        <button class="btn small primary" type="button" id="novo">+ Novo cartão</button>
+        <button class="btn small" type="button" id="duplicar">Duplicar</button>
+        <button class="btn small" type="button" id="excluir">Excluir</button>
+      </div>
+      <div class="cbar" id="confirmaExc" hidden><span class="hint">Excluir o cartão <b id="excNome"></b> deste editor? (as páginas no GitHub continuam)</span>
+        <button class="btn small danger" type="button" id="excSim">Excluir</button><button class="btn small" type="button" id="excNao">Cancelar</button></div>
+      <p class="hint" id="status" role="status">Carregando…</p>
+    </section>
+
+    <section class="sec">
+      <h2>Pessoa</h2>
+      <div class="photo">
+        <img id="fotoPrev" alt="Foto">
+        <div style="display:grid;gap:6px">
+          <label class="btn small" for="foto">Trocar foto</label>
+          <input id="foto" type="file" accept="image/*" hidden>
+          <button class="btn small" type="button" id="semFoto">Usar iniciais</button>
+        </div>
+        <p class="hint" style="flex:1;min-width:180px">A foto vai dentro dos arquivos. Não precisa subir imagem.</p>
+      </div>
+      <div class="grid2">
+        <label class="f">Nome<input id="nome" type="text"></label>
+        <label class="f">Pasta no repositório (vazio = raiz)<input id="pasta" type="text"></label>
+        <label class="f">Cidade<input id="local" type="text"></label>
+        <label class="f">Formação<input id="formacao" type="text" placeholder="Ex: Engenharia de Produção"></label>
+        <label class="f">Faculdade / escola<input id="escola" type="text" placeholder="Ex: Instituto Mauá"></label>
+        <label class="f">Habilidades (separe por vírgula)<input id="habilidades" type="text" placeholder="Ex: Vendas, Negociação, CRM"></label>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Aparência</h2>
+      <div class="grid2">
+        <div class="f">Cor de destaque
+          <div class="sws" id="sws"></div>
+          <label class="chk"><input type="color" id="cor"> Escolher outra cor</label>
+        </div>
+        <div class="f">Tema
+          <div class="modos" id="modos">
+            <label class="chip"><input type="radio" name="modo" value="claro">Claro</label>
+            <label class="chip"><input type="radio" name="modo" value="intermediario">Intermediário</label>
+            <label class="chip"><input type="radio" name="modo" value="escuro">Escuro</label>
+          </div>
+        </div>
+      </div>
+      <div class="imgs">
+        <div class="imgbox"><span class="f">Imagem de capa</span><div class="capaPrev" id="capaPrev"></div>
+          <div class="row"><label class="btn small" for="capa">Enviar capa</label><input id="capa" type="file" accept="image/*" hidden><button class="btn small" type="button" id="semCapa">Sem capa (degradê)</button></div></div>
+        <div class="imgbox"><span class="f">Logo (canto da capa)</span><div class="logoPrev" id="logoPrev"></div>
+          <div class="row"><label class="btn small" for="logo">Enviar logo</label><input id="logo" type="file" accept="image/*" hidden><button class="btn small" type="button" id="semLogo">Sem logo</button></div></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="marca"> Mostrar "nfcshare" no topo da página</label>
+    </section>
+
+    <section class="sec">
+      <h2>Perfis <small>o que aparece no topo e o que vai no "Salvar contato"</small></h2>
+      <div class="perfis" id="perfis"></div>
+      <div><button class="btn small" type="button" id="addPerfil">+ Novo perfil</button></div>
+    </section>
+
+    <section class="sec">
+      <h2>Itens <small>marque em quais perfis cada um aparece</small></h2>
+      <div class="ithead"><span>Tipo</span><span>Nome do botão</span><span>Endereço</span><span>Perfis</span><span></span></div>
+      <div class="itens" id="itens"></div>
+      <div><button class="btn small" type="button" id="addItem">+ Item</button></div>
+      <p class="hint">Ligar, WhatsApp e SMS sem número usam o celular do perfil. Redes: pode colocar só o usuário (ex.: <code>elis_nascimento23</code>) ou o link. Pix: o botão copia a chave para a pessoa colar no app do banco. Pode repetir tipos (vários e-mails ou chaves Pix). Endereço: digite rua, número, bairro e cidade, e o botão abre o Google Maps.</p>
+    </section>
+
+    <section class="sec" id="ghSec">
+      <h2>Publicar no GitHub <small>um clique, sem copiar e colar</small></h2>
+      <div class="grid2">
+        <label class="f">Organização ou usuário<input id="ghOwner" type="text" placeholder="nfcshare"></label>
+        <label class="f">Repositório<input id="ghRepo" type="text" placeholder="elisnascimento"></label>
+        <label class="f">Chave de acesso (token)<input id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off"></label>
+      </div>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" type="button" id="ghPub">Publicar no GitHub</button>
+        <button class="btn small" type="button" id="ghLoad">Carregar o que está no GitHub</button>
+      </div>
+      <p class="hint" id="ghStatus" role="status">A chave fica guardada só neste navegador.</p>
+      <p class="hint">Endereço do cartão: <code id="ghUrl"></code></p>
+    </section>
+    <p class="note" id="ghNote" hidden>O botão "Publicar no GitHub" funciona no editor hospedado no GitHub. Aqui, use os botões de copiar abaixo.</p>
+
+    <section class="sec">
+      <h2>Publicar manualmente</h2>
+      <p class="note">Para cada perfil, copie a página e o contato e cole no GitHub no caminho indicado. Se o arquivo ainda não existir: <b>Add file → Create new file</b> e digite o caminho completo (a barra cria a pasta).</p>
+      <div id="pub" style="display:grid;gap:10px"></div>
+      <span class="toast" id="toast" role="status"></span>
+      <textarea class="out" id="out" aria-hidden="true" tabindex="-1"></textarea>
+    </section>
+  </div>
+
+  <aside class="side">
+    <div class="switch" id="switch"></div>
+    <div class="phone"><iframe id="prev" title="Prévia do cartão"></iframe></div>
+    <p class="hint">Prévia ao vivo do perfil selecionado</p>
+  </aside>
+</div>
+
+<script>
+const TPL_BEFORE = "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\"><title>__TITLE__<\/title>\n<meta name=\"claude:viewport-fit-sides\" content=\"cover\">\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&display=swap\">\n<style>\n/* Layout: interface no padrão dot. — card com capa em degradê royal, foto sobreposta à esquerda,\n   pílulas que funcionam como abas, ação principal + botão quadrado, conteúdo da aba abaixo. Tema escuro único. */\n:root{\n  --bg:#0C1424; --card:#131E33; --card-2:#1A2843; --ink:#F1F5FD; --muted:#93A3C2; --line:#24365A;\n  --royal:#2B5BD7; --royal-hi:#4F86FF; --sky:#8DB8FF; --pill:#2A3955; --on-accent:#FFFFFF;\n  --ic-bg:#22356A; --sq-bg:#24438F; --cover:linear-gradient(180deg,#0F1A33 0%,#173B9C 52%,#4F86FF 100%); --glow:rgba(141,184,255,.45);\n  --f:\"Nunito Sans\",\"Avenir Next\",system-ui,-apple-system,sans-serif;\n  color-scheme:dark;\n}\n*{box-sizing:border-box}\n[hidden]{display:none!important}\nhtml{background:var(--bg)}\nbody{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.45;\n  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}\n.page{max-width:460px;margin:0 auto;display:grid;gap:14px}\n.brand{text-align:center;font-weight:800;letter-spacing:.02em;color:var(--muted);font-size:13px}\n\n.card{background:var(--card);border-radius:20px;overflow:hidden}\n.cover{height:150px;border-radius:20px 20px 0 0;border:1.5px solid var(--royal-hi);border-bottom:0;\n  background:var(--cover);background-size:cover;background-position:center;position:relative}\n.cover::after{content:\"\";position:absolute;inset:0;border-radius:inherit;\n  background:radial-gradient(90% 70% at 85% 110%, var(--glow), transparent 60%)}\n.head{padding:0 18px 18px;display:grid;gap:4px}\n.avatar{width:112px;height:112px;border-radius:50%;margin-top:-62px;position:relative;z-index:1;\n  border:3px solid var(--royal-hi);background:var(--card-2);overflow:hidden;display:grid;place-items:center;\n  font-weight:800;font-size:38px;color:var(--sky);box-shadow:0 0 0 4px var(--card)}\n.avatar img{width:100%;height:100%;object-fit:cover}\nh1{margin:10px 0 0;font-weight:900;font-size:25px;line-height:1.15;letter-spacing:-.005em;text-wrap:balance}\n.role{margin:0;color:var(--ink);font-weight:600;font-size:15px}\n.loc{margin:2px 0 0;color:var(--muted);font-size:14px;font-weight:600;border-left:3px solid var(--royal-hi);padding-left:8px;line-height:1.2}\n.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}\n.tab{font:700 13px var(--f);color:var(--ink);background:var(--pill);border:0;border-radius:999px;padding:8px 14px;cursor:pointer;\n  box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}\n.tab[aria-selected=\"true\"]{background:var(--royal);color:var(--on-accent);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),0 0 0 1px var(--royal-hi)}\n\n.actions{display:grid;grid-template-columns:1fr 56px;gap:10px}\n.save{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;border-radius:12px;background:var(--royal-hi);\n  color:var(--on-accent);font:800 17px var(--f);text-decoration:none;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}\n.save svg{width:20px;height:20px}\n.sq{display:grid;place-items:center;border-radius:12px;background:var(--sq-bg);color:var(--sky);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}\n.sq svg{width:24px;height:24px}\n\n.panel{background:var(--card);border-radius:20px;padding:16px;display:grid;gap:10px}\n.panel h2{margin:0 0 2px;font-weight:800;font-size:17px}\n.panel .txt{margin:0;color:var(--muted);font-size:15px}\n.panel .txt:empty{display:none}\n.headline{margin:0;padding:12px 14px;border-radius:12px;background:var(--card-2);border-left:3px solid var(--royal-hi);font-weight:600;font-size:15px}\n.link{display:grid;grid-template-columns:44px 1fr 18px;gap:12px;align-items:center;padding:10px 12px 10px 10px;border-radius:14px;\n  background:var(--card-2);color:var(--ink);text-decoration:none}\n.link .ic{width:44px;height:44px;border-radius:12px;background:var(--ic-bg);color:var(--sky);display:grid;place-items:center}\n.link .ic svg{width:22px;height:22px}\n.link b{display:block;font-weight:700}\n.link small{display:block;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.link > span:nth-child(2){min-width:0}\n.link .chev{color:var(--muted)}\nbutton.link{border:0;width:100%;text-align:left;font:inherit;cursor:pointer}\n.link .chev svg{display:block}\n.tblock{margin:2px 2px;font-size:15px;white-space:pre-line}\n.divisor{border:0;height:1px;background:var(--line);margin:4px 0}\n\n.topbar{display:grid;grid-template-columns:40px 1fr 40px;align-items:center}\n.share{width:40px;height:40px;border-radius:50%;border:0;background:var(--card);color:var(--sky);display:grid;place-items:center;cursor:pointer}\n.share svg{width:20px;height:20px}\n.sheet-bg{position:fixed;inset:0;background:rgba(5,10,20,.6);display:flex;align-items:flex-end;justify-content:center;z-index:20}\n.sheet{width:100%;max-width:460px;background:var(--card);border-radius:22px 22px 0 0;display:grid;gap:12px;justify-items:center;\n  padding:10px 20px calc(20px + env(safe-area-inset-bottom,0px))}\n.sheet .grip{width:40px;height:4px;border-radius:4px;background:var(--line)}\n.sheet h2{margin:4px 0 0;font-weight:900;font-size:20px}\n.sheet .txt{margin:0;color:var(--muted);font-size:14px;text-align:center}\n.qrbox{background:#fff;border-radius:16px;padding:14px 14px 8px;display:grid;justify-items:center;gap:4px}\n.qrbox small{color:#5F6E80;font-size:11px;font-weight:700}\n#qr canvas,#qr img{display:block;width:220px!important;height:220px!important}\n.sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}\n.sheet-actions .save{border:0;cursor:pointer;font-size:16px}\n.ghost{min-height:54px;border-radius:12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);font:800 16px var(--f);cursor:pointer}\n.close{border:0;background:none;color:var(--muted);font:700 14px var(--f);cursor:pointer;padding:6px}\n.ic img{width:24px;height:24px;object-fit:contain}\n.aviso{margin:0;text-align:center;font-size:12px;font-weight:700;color:var(--sky);background:var(--ic-bg);border-radius:10px;padding:8px 10px}\n.sharebig{min-height:50px;border-radius:12px;border:1.5px solid var(--royal-hi);background:transparent;color:var(--sky);font:800 15px var(--f);cursor:pointer}\n\n.cover.temfoto::after{display:none}\n.logo{position:absolute;top:12px;right:12px;z-index:2;max-width:96px;max-height:44px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.92);object-fit:contain}\n.edu{margin:2px 0 0;color:var(--muted);font-size:14px;font-weight:600;display:flex;gap:6px;align-items:center}\n.edu svg{width:16px;height:16px;flex:none}\n.skills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}\n.skill{font:700 12px var(--f);color:var(--ink);background:var(--pill);border-radius:999px;padding:6px 12px}\n.empty{color:var(--muted);font-size:14px;margin:0}\na:focus-visible,button:focus-visible{outline:3px solid var(--sky);outline-offset:2px}\n@media (prefers-reduced-motion:no-preference){.link,.save,.sq,.tab{transition:transform .12s ease,background .15s}}\n.link:active,.save:active,.sq:active{transform:scale(.98)}\nfooter{text-align:center;font-size:12px;color:var(--muted)}\n<\/style><\/head><body>\n<main class=\"page\">\n  <p class=\"aviso\" id=\"aviso\" hidden>Seu painel · só você vê esta página. Escolha o perfil e compartilhe.<\/p>\n  <div class=\"topbar\"><span><\/span><div class=\"brand\">nfcshare<\/div>\n    <button class=\"share\" type=\"button\" id=\"shareBtn\" aria-label=\"Compartilhar com QR code\">\n      <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><path d=\"M14 14h3v3M21 14v.01M17 21h4v-4M14 21v-.01\"/><\/svg>\n    <\/button><\/div>\n  <section class=\"card\">\n    <div class=\"cover\" id=\"cover\"><img class=\"logo\" id=\"logo\" alt=\"\" hidden><\/div>\n    <div class=\"head\">\n      <div class=\"avatar\" id=\"avatar\"><\/div>\n      <h1 id=\"nome\"><\/h1>\n      <p class=\"role\" id=\"cargo\"><\/p>\n      <p class=\"loc\" id=\"local\"><\/p>\n      <p class=\"edu\" id=\"edu\" hidden><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M2 9l10-5 10 5-10 5Z\"/><path d=\"M6 11v5c3 2 9 2 12 0v-5\"/><\/svg><span><\/span><\/p>\n      <div class=\"skills\" id=\"skills\" hidden><\/div>\n      <div class=\"tabs\" role=\"tablist\" id=\"tabs\" hidden><\/div>\n    <\/div>\n  <\/section>\n  <div class=\"actions\">\n    <a class=\"save\" id=\"salvar\" href=\"#\">\n      <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"4\"/><path d=\"M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7\"/><path d=\"M19 8v6M16 11h6\"/><\/svg>\n      Salvar contato\n    <\/a>\n    <a class=\"sq\" id=\"wpp\" target=\"_blank\" rel=\"noopener\" aria-label=\"WhatsApp\"><\/a>\n  <\/div>\n  <button class=\"sharebig\" type=\"button\" id=\"shareBig\" hidden>Mostrar QR deste perfil<\/button>\n  <section class=\"panel\" id=\"panel\"><\/section>\n  <footer>Aproxime o cartão ou escaneie o QR<\/footer>\n<div class=\"sheet-bg\" id=\"sheetBg\" hidden>\n  <div class=\"sheet\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"sheetT\">\n    <div class=\"grip\"><\/div>\n    <h2 id=\"sheetT\">Compartilhar<\/h2>\n    <p class=\"txt\">Peça para a pessoa apontar a câmera para o código.<\/p>\n    <div class=\"qrbox\"><div id=\"qr\"><\/div><small>nfcshare<\/small><\/div>\n    <div class=\"sheet-actions\">\n      <button class=\"save\" type=\"button\" id=\"copyLink\">Copiar link<\/button>\n      <button class=\"ghost\" type=\"button\" id=\"nativeShare\">Enviar…<\/button>\n    <\/div>\n    <button class=\"close\" type=\"button\" id=\"closeSheet\">Fechar<\/button>\n  <\/div>\n<\/div>\n<\/main>\n\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js\"><\/script>\n<script>\n/* ===================== EDITE AQUI ===================== */\nconst P = ";
+const TPL_AFTER  = ";\n/* ====================================================== */\n\nconst I = {\n  linkedin:'<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.75h4v11H3v-11Zm6.5 0h3.83v1.5h.05c.53-1 1.84-2.05 3.79-2.05 4.05 0 4.8 2.67 4.8 6.13v5.42h-4v-4.8c0-1.15-.02-2.62-1.6-2.62-1.6 0-1.84 1.25-1.84 2.54v4.88h-4v-11Z\"/><\/svg>',\n  email:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2.5\"/><path d=\"m4 7 8 6 8-6\"/><\/svg>',\n  whatsapp:'<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.6-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.9 2.3 1 2.5c.1.2 1.7 2.6 4.1 3.6 1.5.7 2.1.7 2.9.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.2-.2Z\"/><\/svg>',\n  telefone:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2Z\"/><\/svg>',\n  instagram:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"5\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/><circle cx=\"17.5\" cy=\"6.5\" r=\"1\" fill=\"currentColor\" stroke=\"none\"/><\/svg>',\n  facebook:'<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H7.9v3h2.6V21h3Z\"/><\/svg>',\n  pdf:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z\"/><path d=\"M14 3v5h5M9 13h6M9 17h4\"/><\/svg>',\n  empresa:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M2 21h20M8 8h3M8 12h3M8 16h3\"/><\/svg>',\n  calendario:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16.5\" rx=\"2.5\"/><path d=\"M3 9.5h18M8 2.5v4M16 2.5v4\"/><path d=\"m9 15 2 2 4-4\"/><\/svg>',\n  endereco:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z\"/><circle cx=\"12\" cy=\"9.5\" r=\"2.5\"/><\/svg>',\n  chat:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 5h16v11H9l-5 4Z\"/><\/svg>',\n  video:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"3\"/><path d=\"m10 9 5 3-5 3Z\" fill=\"currentColor\"/><\/svg>',\n  musica:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18V5l11-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"17\" cy=\"16\" r=\"3\"/><\/svg>',\n  codigo:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14\"/><\/svg>',\n  portfolio:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10\" r=\"2\"/><path d=\"m21 16-5-5-9 9\"/><\/svg>',\n  vaga:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2.5\"/><path d=\"M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18\"/><\/svg>',\n  rede:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8\"/><\/svg>',\n  pix:'<img alt=\"\" src=\"data:image/png;base64,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\">',\n  pixOld:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"6\" width=\"18\" height=\"13\" rx=\"2.5\"/><path d=\"M3 10h18M15 15h3\"/><\/svg>',\n  link:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1\"/><path d=\"M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1\"/><\/svg>',\n  copiar:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"8\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2\"/><\/svg>',\n  site:'<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/><\/svg>',\n  chev:'<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"m9 6 6 6-6 6\"/><\/svg>'\n};\nconst $ = id => document.getElementById(id);\nconst digits = s => (s||\"\").replace(/\\D/g,\"\");\n\n/* ===== Tema: cor de destaque + claro / intermediário / escuro ===== */\nconst hex2rgb=h=>{h=(h||\"#2B5BD7\").replace(\"#\",\"\");if(h.length===3)h=h.split(\"\").map(x=>x+x).join(\"\");const n=parseInt(h,16);return [n>>16&255,n>>8&255,n&255];};\nconst mix=(a,b,t)=>{const A=hex2rgb(a),B=hex2rgb(b);return \"#\"+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,\"0\")).join(\"\");};\nconst lum=h=>{const c=hex2rgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2];};\nfunction aplicarTema(t){\n  t=t||{}; const cor=t.cor||\"#2B5BD7\", modo=t.modo||\"escuro\", r=document.documentElement.style;\n  const M={escuro:{bg:\"#0C1424\",card:\"#131E33\",card2:\"#1A2843\",ink:\"#F1F5FD\",muted:\"#93A3C2\",line:\"#24365A\",pill:\"#2A3955\",top:\"#0F1A33\"},\n           intermediario:{bg:\"#15202B\",card:\"#192734\",card2:\"#22303C\",ink:\"#F2F5F8\",muted:\"#9AA7B4\",line:\"#2D3C49\",pill:\"#2D3C49\",top:\"#15202B\"},\n           claro:{bg:\"#EEF2F6\",card:\"#FFFFFF\",card2:\"#F3F6FA\",ink:\"#13202E\",muted:\"#5F6E80\",line:\"#DCE3EC\",pill:\"#E6EBF2\",top:\"#FFFFFF\"}}[modo]||{};\n  const claro = modo===\"claro\";\n  const hi = claro ? cor : mix(cor,\"#FFFFFF\",.18);\n  const set={\"--bg\":M.bg,\"--card\":M.card,\"--card-2\":M.card2,\"--ink\":M.ink,\"--muted\":M.muted,\"--line\":M.line,\"--pill\":M.pill,\n    \"--royal\":cor,\"--royal-hi\":hi,\"--sky\":claro?mix(cor,\"#000000\",.15):mix(cor,\"#FFFFFF\",.45),\n    \"--ic-bg\":mix(M.card2,cor,claro?.14:.28),\"--sq-bg\":mix(M.card,cor,claro?.2:.45),\n    \"--on-accent\":lum(hi)>.45?\"#0C1424\":\"#FFFFFF\",\"--glow\":claro?\"transparent\":mix(cor,\"#FFFFFF\",.5)+\"73\",\n    \"--cover\":claro?`linear-gradient(160deg,${mix(cor,\"#FFFFFF\",.35)} 0%,${cor} 100%)`:`linear-gradient(180deg,${M.top} 0%,${mix(cor,\"#000000\",.35)} 52%,${hi} 100%)`};\n  for(const k in set) r.setProperty(k,set[k]);\n  r.setProperty(\"color-scheme\",claro?\"light\":\"dark\");\n}\naplicarTema(P.tema);\nfunction capaLogo(c){\n  const capa=(c&&c.capa)||P.capa, logo=(c&&c.logo)||P.logo, cv=$(\"cover\");\n  if (capa){ cv.style.background=`center/cover no-repeat url(\"${capa}\")`; cv.classList.add(\"temfoto\"); }\n  else { cv.style.background=\"\"; cv.classList.remove(\"temfoto\"); }\n  if (logo){ $(\"logo\").src=logo; $(\"logo\").hidden=false; } else { $(\"logo\").hidden=true; $(\"logo\").removeAttribute(\"src\"); }\n}\nif (P.marca===false) document.querySelector(\".brand\").style.visibility=\"hidden\";\nfunction cabecalhoExtra(c){\n  const edu=[P.formacao,P.escola].filter(Boolean).join(\" · \"), mostrar=c.mostrarFormacao!==false;\n  $(\"edu\").hidden=!(edu&&mostrar); $(\"edu\").querySelector(\"span\").textContent=edu;\n  const sk=(P.habilidades||[]).filter(Boolean); $(\"skills\").innerHTML=\"\";\n  sk.forEach(s=>{const e=document.createElement(\"span\");e.className=\"skill\";e.textContent=s;$(\"skills\").appendChild(e);});\n  $(\"skills\").hidden=!(sk.length&&mostrar);\n}\n\n/* Página pública = 1 perfil. Painel (só da dona) = vários perfis com pílulas para escolher qual compartilhar. */\nconst PAINEL = Array.isArray(P.perfis);\nconst perfis = PAINEL ? P.perfis : [P];\nlet C = perfis[0], linkCartao = \"\", qrFeito = false;\n\n$(\"nome\").textContent = P.nome;\n$(\"local\").textContent = P.local||\"\"; $(\"local\").hidden = !P.local;\nif (P.foto) $(\"avatar\").innerHTML = '<img alt=\"Foto de '+P.nome+'\" src=\"'+P.foto+'\">';\nelse $(\"avatar\").textContent = P.nome.split(\" \").map(w=>w[0]).slice(0,2).join(\"\");\n\nfunction aplicar(c){\n  C = c; cabecalhoExtra(c); capaLogo(c);\n  $(\"cargo\").textContent = c.subtitulo||\"\"; $(\"cargo\").hidden = !c.subtitulo;\n  /* Salvar contato: Android abre \"Novo contato\" preenchido; iPhone usa o .vcf */\n  if (/Android/i.test(navigator.userAgent)) {\n    const e = encodeURIComponent, x = [\"S.name=\"+e(P.nome)];\n    if (c.email) x.push(\"S.email=\"+e(c.email));\n    if (c.telefone) x.push(\"S.phone=\"+e(c.telefone));\n    if (c.cargo) x.push(\"S.job_title=\"+e(c.cargo));\n    if (c.empresa) x.push(\"S.company=\"+e(c.empresa));\n    if (c.endereco) x.push(\"S.postal=\"+e(c.endereco));\n    $(\"salvar\").href = \"intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/raw_contact;\"\n      + x.join(\";\") + \";S.browser_fallback_url=\"+e(new URL(c.vcf, location.href).href)+\";end\";\n  } else { $(\"salvar\").href = c.vcf; }\n  const tel = digits(c.telefone), acts=document.querySelector(\".actions\");\n  if (tel && c.botaoWhatsapp !== false){ $(\"wpp\").hidden=false; $(\"wpp\").href = \"https://wa.me/\"+tel; $(\"wpp\").innerHTML = I.whatsapp; acts.style.gridTemplateColumns=\"\"; }\n  else { $(\"wpp\").hidden = true; acts.style.gridTemplateColumns = \"1fr\"; }\n\n  const p = $(\"panel\"); p.innerHTML=\"\"; p.hidden=false;\n  if (c.headline){ const h=document.createElement(\"p\"); h.className=\"headline\"; h.textContent=c.headline; p.appendChild(h); }\n  c.links.forEach(l=>{\n    if (l.tipo===\"divisor\"){ const d=document.createElement(\"hr\"); d.className=\"divisor\"; p.appendChild(d); return; }\n    if (l.tipo===\"texto\"){ const d=document.createElement(\"p\"); d.className=\"tblock\"; d.textContent=l.texto; p.appendChild(d); return; }\n    let el;\n    if (l.pix){\n      el=document.createElement(\"button\"); el.type=\"button\"; el.className=\"link\";\n      el.onclick=async()=>{ const sm=el.querySelector(\"small\");\n        try{ await navigator.clipboard.writeText(l.pix); sm.textContent=\"Chave copiada! Cole no app do banco.\"; }\n        catch(e){ sm.textContent=l.pix+\"  (toque e segure para copiar)\"; }\n        setTimeout(()=>sm.textContent=l.s,3000); };\n    } else {\n      el=document.createElement(\"a\"); el.className=\"link\"; el.href=l.u;\n      if (!/^(tel|mailto|sms):/.test(l.u)) { el.target=\"_blank\"; el.rel=\"noopener\"; }\n    }\n    el.innerHTML='<span class=\"ic\">'+(I[l.tipo]||I.site)+'<\/span><span><b><\/b><small><\/small><\/span><span class=\"chev\">'+(l.pix?I.copiar:I.chev)+'<\/span>';\n    el.querySelector(\"b\").textContent=l.t; el.querySelector(\"small\").textContent=l.s||\"\";\n    p.appendChild(el);\n  });\n  if (!c.links.length && !c.headline) p.hidden = true;\n  linkCartao = c.linkCartao || c.linkCurto || location.href.split(\"#\")[0];\n  $(\"qr\").innerHTML=\"\"; qrFeito=false;\n  if (PAINEL){\n    document.querySelectorAll(\".tab\").forEach(b=>b.setAttribute(\"aria-selected\", b.dataset.id===c.id));\n    try{ localStorage.setItem(\"perfil-\"+P.nome, c.id); }catch(e){}\n  }\n}\n\n/* Painel: pílulas para escolher o perfil a compartilhar */\nif (PAINEL){\n  $(\"aviso\").hidden = false;\n  perfis.forEach(c=>{\n    const b=document.createElement(\"button\"); b.className=\"tab\"; b.type=\"button\"; b.role=\"tab\"; b.textContent=c.nome; b.dataset.id=c.id;\n    b.onclick=()=>aplicar(c); $(\"tabs\").appendChild(b);\n  });\n  $(\"tabs\").hidden=false; $(\"shareBig\").hidden=false;\n  $(\"shareBig\").onclick=()=>abrirQR();\n  let salvo; try{ salvo=localStorage.getItem(\"perfil-\"+P.nome); }catch(e){}\n  aplicar(perfis.find(c=>c.id===salvo) || perfis[0]);\n} else aplicar(P);\n\n/* Compartilhar com QR code (como o dot.share) */\nfunction abrirQR(){\n  $(\"sheetBg\").hidden=false;\n  $(\"sheetT\").textContent = PAINEL ? \"Compartilhar · \"+C.nome : \"Compartilhar\";\n  if(qrFeito || !window.QRCode) return; qrFeito=true;\n  const tmp=document.createElement(\"div\");\n  new QRCode(tmp,{text:linkCartao,width:440,height:440,colorDark:\"#0C1424\",colorLight:\"#ffffff\",correctLevel:QRCode.CorrectLevel.H});\n  const c=tmp.querySelector(\"canvas\"); if(!c) return;\n  const img=document.createElement(\"img\"); img.alt=\"QR code do cartão\"; $(\"qr\").appendChild(img);\n  const fim=()=>{ img.src=c.toDataURL(\"image/png\"); };\n  if(!P.foto){ fim(); return; }\n  const g=c.getContext(\"2d\"), f=new Image();\n  f.onload=()=>{ const s=c.width*0.24,x=(c.width-s)/2; g.save(); g.beginPath(); g.arc(c.width/2,c.width/2,s/2+8,0,7); g.fillStyle=\"#fff\"; g.fill();\n    g.beginPath(); g.arc(c.width/2,c.width/2,s/2,0,7); g.clip(); g.drawImage(f,x,x,s,s); g.restore(); fim(); };\n  f.onerror=fim; f.src=P.foto;\n}\n$(\"shareBtn\").onclick=abrirQR;\n$(\"closeSheet\").onclick=()=>{$(\"sheetBg\").hidden=true;};\n$(\"sheetBg\").onclick=e=>{ if(e.target.id===\"sheetBg\") $(\"sheetBg\").hidden=true; };\n$(\"copyLink\").onclick=async()=>{ try{ await navigator.clipboard.writeText(linkCartao); $(\"copyLink\").textContent=\"Copiado!\"; }catch(e){ $(\"copyLink\").textContent=linkCartao; }\n  setTimeout(()=>$(\"copyLink\").textContent=\"Copiar link\",2500); };\nif(!navigator.share) $(\"nativeShare\").hidden=true, document.querySelector(\".sheet-actions\").style.gridTemplateColumns=\"1fr\";\n$(\"nativeShare\").onclick=()=>{ navigator.share({title:P.nome, url:linkCartao}).catch(()=>{}); };\n<\/script>\n<\/body><\/html>";
+const MODO = "github";
+const GH = (()=>{ try{ return JSON.parse(localStorage.getItem("nfc-gh"))||{}; }catch(e){ return {}; } })();
+const siteBase = ()=>{ const o=(GH.owner||"nfcshare").toLowerCase(), r=(GH.repo||"nfcshare.github.io").toLowerCase();
+  return "https://"+o+".github.io/"+(r===o+".github.io"?"":r+"/"); };
+const CAT = [
+ ["Contato",[["telefone","Ligar"],["whatsapp","WhatsApp"],["sms","SMS"],["email_pessoal","E-mail pessoal"],["email_prof","E-mail profissional"],["endereco","Endereço (Google Maps)"],["site","Site"],["empresa","Site da empresa"]]],
+ ["Redes sociais",[["instagram","Instagram"],["facebook","Facebook"],["linkedin","LinkedIn"],["x","X (Twitter)"],["tiktok","TikTok"],["kwai","Kwai"],["youtube","YouTube"],["threads","Threads"],["bluesky","Bluesky"],["pinterest","Pinterest"],["snapchat","Snapchat"],["telegram","Telegram"],["discord","Discord"],["twitch","Twitch"],["reddit","Reddit"]]],
+ ["Carreira",[["indeed","Indeed"],["catho","Catho"],["gupy","Gupy"],["infojobs","InfoJobs"],["vagas","Vagas.com.br"],["empregos","Empregos.com.br"],["glassdoor","Glassdoor"],["lattes","Currículo Lattes"],["workana","Workana"],["freelas99","99Freelas"],["pdf","Currículo (PDF)"]]],
+ ["Conteúdo",[["arquivo","Documento ou link"],["texto","Bloco de texto"],["divisor","Divisor"]]],
+ ["Produtividade e negócios",[["calendario","Calendly"],["notion","Notion"],["drive","Google Drive"],["avaliacoes","Avaliações no Google"],["booksy","Booksy"],["appstore","App Store"],["googleplay","Google Play"],["elo7","Elo7"],["medium","Medium"],["behance","Behance"],["dribbble","Dribbble"],["github","GitHub"]]],
+ ["Pagamento",[["pix","Pix"]]],
+ ["Música e podcasts",[["spotify","Spotify"],["applemusic","Apple Music"],["deezer","Deezer"],["youtubemusic","YouTube Music"],["soundcloud","SoundCloud"],["tidal","Tidal"],["amazonmusic","Amazon Music"],["bandcamp","Bandcamp"],["beatport","Beatport"],["podcasts","Apple Podcasts"]]],
+];
+const NOME = Object.fromEntries(CAT.flatMap(g=>g[1]));
+const PAT = {instagram:"instagram.com/{u}",facebook:"facebook.com/{u}",linkedin:"linkedin.com/in/{u}",x:"x.com/{u}",tiktok:"tiktok.com/@{u}",
+  youtube:"youtube.com/@{u}",threads:"threads.net/@{u}",bluesky:"bsky.app/profile/{u}",pinterest:"pinterest.com/{u}",snapchat:"snapchat.com/add/{u}",
+  telegram:"t.me/{u}",twitch:"twitch.tv/{u}",reddit:"reddit.com/user/{u}",lattes:"lattes.cnpq.br/{u}",medium:"medium.com/@{u}",
+  behance:"behance.net/{u}",dribbble:"dribbble.com/{u}",github:"github.com/{u}",calendario:"calendly.com/{u}",soundcloud:"soundcloud.com/{u}"};
+const ARROBA = new Set(["instagram","x","tiktok","threads","telegram","twitch","snapchat","github","medium","bluesky","youtube","kwai"]);
+const ICONE = {telefone:"telefone",whatsapp:"whatsapp",sms:"chat",email_pessoal:"email",email_prof:"email",endereco:"endereco",site:"site",empresa:"empresa",
+  instagram:"instagram",facebook:"facebook",linkedin:"linkedin",x:"rede",tiktok:"video",kwai:"video",youtube:"video",threads:"rede",bluesky:"rede",
+  pinterest:"rede",snapchat:"rede",telegram:"chat",discord:"chat",twitch:"video",reddit:"rede",
+  indeed:"vaga",catho:"vaga",gupy:"vaga",infojobs:"vaga",vagas:"vaga",empregos:"vaga",glassdoor:"vaga",lattes:"pdf",workana:"vaga",freelas99:"vaga",pdf:"pdf",
+  arquivo:"link",calendario:"calendario",notion:"link",drive:"link",avaliacoes:"site",booksy:"calendario",appstore:"link",googleplay:"link",elo7:"site",
+  medium:"pdf",behance:"portfolio",dribbble:"portfolio",github:"codigo",pix:"pix"};
+["spotify","applemusic","deezer","youtubemusic","soundcloud","tidal","amazonmusic","bandcamp","beatport","podcasts"].forEach(k=>ICONE[k]="musica");
+const PH = {telefone:"usa o celular do perfil",whatsapp:"usa o celular do perfil",sms:"usa o celular do perfil",
+  email_pessoal:"nome@email.com",email_prof:"nome@empresa.com.br",endereco:"Rua, número, bairro, cidade",pix:"chave Pix (CPF, e-mail, celular ou aleatória)",
+  texto:"Escreva o texto aqui",divisor:"(linha separadora, sem endereço)",pdf:"nome.pdf"};
+const phOf = t => PH[t] || (PAT[t] ? "usuário ou link" : "https://…");
+const KEY="nfc-editor-v7";
+const PRESETS=[["#2B5BD7","Azul royal"],["#3FC1A8","Verde-água"],["#22A06B","Verde"],["#E5484D","Vermelho"],["#F5A524","Amarelo"],["#7C5CFF","Roxo"],["#0EA5E9","Azul-céu"],["#6B7280","Cinza"]];
+const novoId=()=>"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function cartaoVazio(){
+  return {id:novoId(),nome:"Novo cartão",pasta:"novocartao",local:"São Paulo, SP",foto:"",capa:"",logo:"",marca:true,
+    tema:{cor:"#2B5BD7",modo:"escuro"},formacao:"",escola:"",habilidades:"",
+    perfis:[{id:"profissional",nome:"Profissional",linkCurto:"",pasta:"",subtitulo:"",headline:"",telefone:"",email:"",cargo:"",empresa:"",enderecoContato:"",botaoWhatsapp:true,mostrarFormacao:true},
+            {id:"social",nome:"Social",linkCurto:"",pasta:"social",subtitulo:"",headline:"",telefone:"",email:"",cargo:"",empresa:"",enderecoContato:"",botaoWhatsapp:true,mostrarFormacao:false}],
+    itens:[{tipo:"whatsapp",t:"WhatsApp",u:"",em:{profissional:true,social:true}},{tipo:"telefone",t:"Ligar",u:"",em:{profissional:true,social:true}},
+           {tipo:"email_pessoal",t:"E-mail",u:"",em:{profissional:true}},{tipo:"linkedin",t:"LinkedIn",u:"",em:{profissional:true}},
+           {tipo:"instagram",t:"Instagram",u:"",em:{social:true}}]};
+}
+function normaliza(x){ const b=cartaoVazio(); x={...b,...x}; x.tema={...b.tema,...(x.tema||{})};
+  x.perfis=(x.perfis&&x.perfis.length?x.perfis:b.perfis).map(p=>({mostrarFormacao:p.id==="profissional",...p})); x.itens=x.itens||[]; return x; }
+let CARTOES={}, S=cartaoVazio(), atual="profissional", DB=null;
+
+const $=id=>document.getElementById(id);
+const digits=s=>(s||"").replace(/\D/g,"");
+const slug=s=>(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const pasta=()=>slug(S.pasta).replace(/-/g,"");
+const vcfNome=()=>(slug(S.nome).replace(/-/g,"")||"contato")+".vcf";
+const dir=(...a)=>a.filter(Boolean).map(x=>x.replace(/^\/+|\/+$/g,"")).filter(Boolean).join("/");
+const full=u=>!u?"":(/^(https?:|mailto:|tel:)/i.test(u)?u:"https://"+u.replace(/^\/+/,""));
+const pretty=u=>u.replace(/^https?:\/\//i,"").replace(/^www\./,"").replace(/\/$/,"");
+const fmt=t=>{const d=digits(t); return d.length===13?"+"+d.slice(0,2)+" "+d.slice(2,4)+" "+d.slice(4,9)+"-"+d.slice(9):t;};
+
+function out(l,p){
+  const ic=ICONE[l.tipo]||"site", nm=l.t||NOME[l.tipo]||"Link";
+  switch(l.tipo){
+    case "whatsapp":{const n=digits(l.u)||digits(p.telefone);return n&&{tipo:ic,t:nm,s:fmt(n),u:"https://wa.me/"+n};}
+    case "telefone":{const n=digits(l.u)||digits(p.telefone);return n&&{tipo:ic,t:nm,s:fmt(n),u:"tel:+"+n};}
+    case "sms":{const n=digits(l.u)||digits(p.telefone);return n&&{tipo:ic,t:nm,s:fmt(n),u:"sms:+"+n};}
+    case "email_prof":{const m=(l.u||"").replace(/^mailto:/,"");return m&&{tipo:"email",t:nm,s:m,u:"mailto:"+m};}
+    case "email_pessoal": case "email":{const m=(l.u||"").replace(/^mailto:/,"")||p.email;return m&&{tipo:"email",t:nm,s:m,u:"mailto:"+m};}
+    case "endereco":{if(!l.u)return null;return {tipo:ic,t:nm,s:l.u,u:"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(l.u)};}
+    case "pix":{if(!l.u)return null;return {tipo:"pix",t:nm,s:l.u,u:"",pix:l.u.trim()};}
+    case "texto":{if(!l.u)return null;return {tipo:"texto",texto:l.u};}
+    case "divisor":return {tipo:"divisor"};
+    case "pdf":{if(!l.u)return null;const rel=!/^https?:/i.test(l.u);const u=rel?(p.pasta?"../":"")+l.u.replace(/^\/+/,""):l.u;return {tipo:ic,t:nm,s:"PDF",u};}
+    default:{
+      if(!l.u)return null; const v=l.u.trim();
+      if(PAT[l.tipo] && !/[./]/.test(v.replace(/^@/,""))){ const user=v.replace(/^@/,"");
+        return {tipo:ic,t:nm,s:ARROBA.has(l.tipo)?"@"+user:pretty("https://"+PAT[l.tipo].replace("{u}",user)),u:"https://"+PAT[l.tipo].replace("{u}",user)}; }
+      const u=full(v); let s=pretty(u);
+      const m=ARROBA.has(l.tipo)&&u.match(/\/@?([A-Za-z0-9._-]+)\/?$/); if(m) s="@"+m[1];
+      return {tipo:ic,t:nm,s,u};
+    }
+  }
+}
+function visual(){
+  return {tema:S.tema,capa:S.capa||"",logo:S.logo||"",marca:S.marca!==false,formacao:S.formacao||"",escola:S.escola||"",
+    habilidades:(S.habilidades||"").split(",").map(s=>s.trim()).filter(Boolean)};
+}
+function cfg(p){
+  return {...visual(),capa:p.capa||S.capa||"",logo:p.logo||S.logo||"",mostrarFormacao:p.mostrarFormacao!==false,nome:S.nome,local:S.local,foto:S.foto||"",subtitulo:p.subtitulo,headline:p.headline,cargo:p.cargo,empresa:p.empresa,
+    telefone:digits(p.telefone)?"+"+digits(p.telefone):"",email:p.email,endereco:p.enderecoContato||"",botaoWhatsapp:p.botaoWhatsapp!==false,
+    linkCurto:(p.linkCurto||"").trim(),vcf:vcfNome(),links:S.itens.filter(i=>i.em&&i.em[p.id]).map(i=>out(i,p)).filter(Boolean)};
+}
+function cfgPainel(){
+  return {...visual(),nome:S.nome,local:S.local,foto:S.foto||"",perfis:S.perfis.map(p=>{
+    const c=cfg({...p,pasta:"painel"}); ["foto","local","tema","marca","formacao","escola","habilidades"].forEach(k=>delete c[k]); c.capa=p.capa||""; c.logo=p.logo||"";
+    return {...c,id:p.id,nome:p.nome,vcf:"../"+(p.pasta?p.pasta+"/":"")+vcfNome(),linkCartao:(p.linkCurto||"").trim()||urlDe(p)};
+  })};
+}
+function buildPainel(){
+  const js=JSON.stringify(cfgPainel(),null,2).replace(/<\//g,"<\\/");
+  return TPL_BEFORE.replace("<title>__TITLE__</title>","<title>Painel · "+(S.nome||"Cartão").replace(/[&<>]/g,"")+"</title><meta name=\"robots\" content=\"noindex\">") + js + TPL_AFTER;
+}
+function build(p){
+  const js=JSON.stringify(cfg(p),null,2).replace(/<\//g,"<\\/");
+  return TPL_BEFORE.replace("__TITLE__",(S.nome||"Cartão").replace(/[&<>]/g,"")) + js + TPL_AFTER;
+}
+function vcf(p){
+  const n=(S.nome||"").trim().split(/\s+/);const last=n.length>1?n.pop():"";const first=n.join(" ");
+  const L=["BEGIN:VCARD","VERSION:3.0","N:"+last+";"+first+";;;","FN:"+S.nome];
+  if(p.cargo)L.push("TITLE:"+p.cargo); if(p.empresa)L.push("ORG:"+p.empresa);
+  if(digits(p.telefone))L.push("TEL;TYPE=CELL:+"+digits(p.telefone)); if(p.email)L.push("EMAIL;TYPE=INTERNET:"+p.email);
+  if(p.enderecoContato)L.push("ADR;TYPE=HOME:;;"+p.enderecoContato.replace(/[;,]/g," ")+";;;;");
+  const li=S.itens.find(i=>i.tipo==="linkedin"&&i.u&&i.em&&i.em[p.id]); if(li)L.push("URL:"+full(li.u));
+  const m=(S.foto||"").match(/^data:image\/(jpeg|jpg|png);base64,(.+)$/);
+  if(m){ const linha="PHOTO;ENCODING=b;TYPE="+(m[1]==="png"?"PNG":"JPEG")+":"+m[2]; L.push(linha.match(/.{1,74}/g).join("\r\n ")); }
+  L.push("END:VCARD"); return L.join("\r\n")+"\r\n";
+}
+const caminho=p=>{ const d=dir(pasta(),p.pasta); return d?d+"/":""; };
+const urlDe=p=>siteBase()+caminho(p);
+
+/* ---------- Pessoa ---------- */
+const CAMPOS=["nome","pasta","local","formacao","escola","habilidades"];
+CAMPOS.forEach(k=>$(k).addEventListener("input",()=>{S[k]=$(k).value; if(k==="nome")renderSel(); update(true);}));
+function preencher(){
+  CAMPOS.forEach(k=>$(k).value=S[k]||"");
+  $("cor").value=S.tema.cor; document.querySelectorAll('input[name=modo]').forEach(r=>r.checked=r.value===S.tema.modo);
+  $("marca").checked=S.marca!==false; pintarSws(); setFoto(); setImgs();
+}
+function pintarSws(){ const b=$("sws"); b.innerHTML="";
+  PRESETS.forEach(([c,n])=>{const s=document.createElement("button");s.type="button";s.className="sw";s.style.background=c;s.title=n;s.setAttribute("aria-label",n);
+    s.setAttribute("aria-pressed",c.toLowerCase()===(S.tema.cor||"").toLowerCase());s.onclick=()=>{S.tema.cor=c;$("cor").value=c;pintarSws();setImgs();update();};b.appendChild(s);});}
+$("cor").addEventListener("input",()=>{S.tema.cor=$("cor").value;pintarSws();update();});
+document.querySelectorAll('input[name=modo]').forEach(r=>r.addEventListener("change",()=>{S.tema.modo=r.value;update();}));
+$("marca").addEventListener("change",()=>{S.marca=$("marca").checked;update();});
+function setImgs(){ $("capaPrev").style.backgroundImage=S.capa?`url("${S.capa}")`:`linear-gradient(160deg,${S.tema.cor},#0C1424)`; $("logoPrev").style.backgroundImage=S.logo?`url("${S.logo}")`:"none"; }
+function lerImagem(file,maxW,maxH,tipo,q,cb){ const r=new FileReader(); r.onload=()=>{ const im=new Image(); im.onload=()=>{
+  const k=Math.min(1,maxW/im.width,maxH/im.height), c=document.createElement("canvas"); c.width=Math.round(im.width*k); c.height=Math.round(im.height*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height); cb(c.toDataURL(tipo,q)); }; im.src=r.result; }; r.readAsDataURL(file); }
+$("capa").addEventListener("change",e=>{const f=e.target.files[0]; if(f) lerImagem(f,900,360,"image/jpeg",.78,d=>{S.capa=d;setImgs();update();}); e.target.value="";});
+$("logo").addEventListener("change",e=>{const f=e.target.files[0]; if(f) lerImagem(f,320,140,"image/png",1,d=>{S.logo=d;setImgs();update();}); e.target.value="";});
+$("semCapa").onclick=()=>{S.capa="";setImgs();update();}; $("semLogo").onclick=()=>{S.logo="";setImgs();update();};
+function setFoto(){const i=$("fotoPrev"); if(S.foto){i.src=S.foto;i.hidden=false;} else {i.removeAttribute("src");i.hidden=true;}}
+$("foto").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(im.width,im.height),c=document.createElement("canvas");c.width=c.height=400;
+  c.getContext("2d").drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,400,400);S.foto=c.toDataURL("image/jpeg",.82);setFoto();update();};im.src=r.result;};r.readAsDataURL(f);});
+$("semFoto").onclick=()=>{S.foto="";setFoto();update();};
+
+/* ---------- Perfis ---------- */
+function renderPerfis(){
+  const box=$("perfis"); box.innerHTML="";
+  S.perfis.forEach((p,pi)=>{
+    const c=document.createElement("div"); c.className="pcard";
+    c.innerHTML=`<div class="top"><input type="text" data-k="nome" aria-label="Nome do perfil"><button class="x" type="button" aria-label="Remover perfil">×</button></div>
+      <label class="f">Link gravado no cartão (Short.io)<input type="url" data-k="linkCurto" placeholder="https://nfcshare.s.gy/…"></label>
+      <label class="f">Subpasta (vazio = endereço principal)<input type="text" data-k="pasta" placeholder="ex: social"></label>
+      <label class="f">Linha embaixo do nome<input type="text" data-k="subtitulo" placeholder="Cargo · Empresa"></label>
+      <label class="f">Destaque (headline)<textarea data-k="headline" rows="2"></textarea></label>
+      <label class="f">Celular deste perfil<input type="tel" data-k="telefone"></label>
+      <label class="f">E-mail deste perfil<input type="email" data-k="email"></label>
+      <label class="f">Cargo no contato salvo<input type="text" data-k="cargo"></label>
+      <label class="f">Empresa no contato salvo<input type="text" data-k="empresa"></label>
+      <label class="f">Endereço no contato salvo (opcional)<input type="text" data-k="enderecoContato"></label>
+      <label class="chk"><input type="checkbox" data-k="botaoWhatsapp"> Botão de WhatsApp ao lado do "Salvar contato"</label>
+      <label class="chk"><input type="checkbox" data-k="mostrarFormacao"> Mostrar formação e habilidades</label>
+      <div class="f">Capa e logo só deste perfil (vazio = usa os do cartão)
+        <div class="pimg"><div class="capaPrev pc"></div><div class="logoPrev pl"></div></div>
+        <div class="row"><label class="btn small">Capa<input type="file" accept="image/*" class="fc" hidden></label><label class="btn small">Logo<input type="file" accept="image/*" class="fl" hidden></label><button class="btn small lim" type="button">Limpar</button></div>
+      </div>`;
+    c.querySelectorAll("[data-k]").forEach(el=>{
+      const k=el.dataset.k;
+      if(el.type==="checkbox"){el.checked=p[k]!==false; el.onchange=()=>{p[k]=el.checked;update();};}
+      else{el.value=p[k]||""; el.oninput=()=>{p[k]= k==="pasta"?slug(el.value):el.value; if(k==="nome"){renderItens();renderSwitch();} update(k==="pasta"||k==="linkCurto");};}
+    });
+    const pc=c.querySelector(".pc"), pl=c.querySelector(".pl");
+    const pint=()=>{ pc.style.backgroundImage=p.capa?`url("${p.capa}")`:"none"; pl.style.backgroundImage=p.logo?`url("${p.logo}")`:"none"; };
+    pint();
+    c.querySelector(".fc").onchange=ev=>{const f=ev.target.files[0]; if(f) lerImagem(f,900,360,"image/jpeg",.78,d=>{p.capa=d;pint();update();}); ev.target.value="";};
+    c.querySelector(".fl").onchange=ev=>{const f=ev.target.files[0]; if(f) lerImagem(f,320,140,"image/png",1,d=>{p.logo=d;pint();update();}); ev.target.value="";};
+    c.querySelector(".lim").onclick=()=>{p.capa="";p.logo="";pint();update();};
+    c.querySelector(".x").onclick=()=>{ if(S.perfis.length>1){ S.perfis.splice(pi,1); if(!S.perfis.some(x=>x.id===atual))atual=S.perfis[0].id; renderAll(); } };
+    box.appendChild(c);
+  });
+}
+$("addPerfil").onclick=()=>{const id="p"+Date.now().toString(36);const b=S.perfis[0];
+  S.perfis.push({id,nome:"Novo perfil",pasta:"novo",subtitulo:"",headline:"",telefone:b.telefone,email:b.email,cargo:"",empresa:"",enderecoContato:"",botaoWhatsapp:true});renderAll();};
+
+/* ---------- Itens ---------- */
+function renderItens(){
+  const box=$("itens"); box.innerHTML="";
+  S.itens.forEach((it,ii)=>{
+    it.em=it.em||{};
+    const r=document.createElement("div"); r.className="it";
+    r.innerHTML=`<select aria-label="Tipo">${CAT.map(([g,arr])=>`<optgroup label="${g}">${arr.map(([v,n])=>`<option value="${v}">${n}</option>`).join("")}</optgroup>`).join("")}</select>
+      <input type="text" aria-label="Nome do botão" placeholder="Nome do botão">
+      <input class="addr" type="text" aria-label="Endereço">
+      <div class="chips">${S.perfis.map(p=>`<label class="chip"><input type="checkbox" data-p="${p.id}">${p.nome}</label>`).join("")}</div>
+      <button class="x" type="button" aria-label="Remover item">×</button>`;
+    const [sel,t,u,chips,x]=r.children;
+    sel.value=it.tipo; t.value=it.t||""; u.value=it.u||""; u.placeholder=phOf(it.tipo);
+    sel.onchange=()=>{it.tipo=sel.value;u.placeholder=phOf(it.tipo);update();};
+    t.oninput=()=>{it.t=t.value;update();}; u.oninput=()=>{it.u=u.value;update();};
+    chips.querySelectorAll("input").forEach(cb=>{cb.checked=!!it.em[cb.dataset.p]; cb.onchange=()=>{it.em[cb.dataset.p]=cb.checked;update();};});
+    x.onclick=()=>{S.itens.splice(ii,1);renderItens();update();};
+    box.appendChild(r);
+  });
+}
+$("addItem").onclick=()=>{S.itens.push({tipo:"site",t:"",u:"",em:{[atual]:true}});renderItens();update();};
+
+/* ---------- Prévia e publicar ---------- */
+function renderSwitch(){
+  const s=$("switch"); s.innerHTML="";
+  S.perfis.forEach(p=>{const b=document.createElement("button");b.className="btn small";b.type="button";b.textContent=p.nome;
+    b.setAttribute("aria-pressed",p.id===atual);b.onclick=()=>{atual=p.id;renderSwitch();update();};s.appendChild(b);});
+  const b=document.createElement("button");b.className="btn small";b.type="button";b.textContent="★ Painel da dona";
+  b.setAttribute("aria-pressed",atual==="__painel");b.onclick=()=>{atual="__painel";renderSwitch();update();};s.appendChild(b);
+}
+function renderPub(){
+  const box=$("pub"); box.innerHTML="";
+  const pn=slug(S.painel||"painel")||"painel";
+  const dp=document.createElement("div"); dp.className="pubp";
+  dp.innerHTML=`<b>★ Painel da dona (para escolher o perfil e compartilhar)</b><div class="hint">Página: <code class="c1"></code><br>Abra no celular dela e toque em Compartilhar → <b>Adicionar à Tela de Início</b>. Vira um "app" igual ao do Dot.</div>
+    <label class="f" style="max-width:260px">Nome da pasta do painel<input type="text" id="painelNome"></label>
+    <div class="row"><button class="btn primary small" type="button">Copiar painel</button></div>`;
+  dp.querySelector(".c1").textContent=dir(pasta(),pn)+"/index.html";
+  const inp=dp.querySelector("#painelNome"); inp.value=S.painel||"painel"; inp.onchange=()=>{S.painel=slug(inp.value)||"painel"; update();};
+  dp.querySelector("button").onclick=()=>copy(buildPainel(),"Painel");
+  box.appendChild(dp);
+  S.perfis.forEach(p=>{
+    const d=document.createElement("div"); d.className="pubp";
+    d.innerHTML=`<b></b><div class="hint">Página: <code class="c1"></code><br>Contato: <code class="c2"></code><br>Destino no Short.io: <code class="c3"></code></div>
+      <div class="row"><button class="btn primary small" type="button">Copiar página</button><button class="btn small" type="button">Copiar contato</button><button class="btn small" type="button">Copiar destino</button></div>
+      <div class="qrrow"><div class="qrimg"></div><p class="hint">QR code do link <code class="c4"></code>. Para salvar: clique com o botão direito (ou toque e segure) → <b>Salvar imagem</b>. Use no verso do cartão ou para mandar por mensagem.</p></div>`;
+    d.querySelector("b").textContent=p.nome;
+    d.querySelector(".c1").textContent=caminho(p)+"index.html";
+    d.querySelector(".c2").textContent=caminho(p)+vcfNome();
+    d.querySelector(".c3").textContent=urlDe(p);
+    const alvo=(p.linkCurto||"").trim()||urlDe(p);
+    d.querySelector(".c4").textContent=alvo;
+    desenharQR(d.querySelector(".qrimg"),alvo);
+    const [b1,b2,b3]=d.querySelectorAll("button");
+    b1.onclick=()=>copy(build(p),"Página "+p.nome); b2.onclick=()=>copy(vcf(p),"Contato "+p.nome); b3.onclick=()=>copy(urlDe(p),"Destino");
+    box.appendChild(d);
+  });
+}
+function desenharQR(box,texto){
+  if(!window.QRCode){ box.textContent="(QR indisponível)"; return; }
+  const tmp=document.createElement("div");
+  new QRCode(tmp,{text:texto,width:600,height:600,colorDark:"#0C1424",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});
+  const c=tmp.querySelector("canvas"); const img=document.createElement("img"); img.alt="QR code"; box.appendChild(img);
+  const fim=()=>{ img.src=c.toDataURL("image/png"); };
+  if(!S.foto){ fim(); return; }
+  const g=c.getContext("2d"), f=new Image();
+  f.onload=()=>{ const s=c.width*.24,x=(c.width-s)/2; g.save(); g.beginPath(); g.arc(c.width/2,c.width/2,s/2+10,0,7); g.fillStyle="#fff"; g.fill();
+    g.beginPath(); g.arc(c.width/2,c.width/2,s/2,0,7); g.clip(); g.drawImage(f,x,x,s,s); g.restore(); fim(); };
+  f.onerror=fim; f.src=S.foto;
+}
+let tm;
+function update(full){
+  agendarSalvar(); try{ $("ghUrl").textContent=urlDe(S.perfis[0]); }catch(e){}
+  if(full!==false) renderPub();
+  clearTimeout(tm); tm=setTimeout(()=>{ if(atual==="__painel"){ $("prev").srcdoc=buildPainel(); return; } const p=S.perfis.find(x=>x.id===atual)||S.perfis[0]; $("prev").srcdoc=build(p);},150);
+}
+async function copy(text,label){
+  try{await navigator.clipboard.writeText(text);flash(label+" copiado");}
+  catch(e){const o=$("out");o.value=text;o.select();try{document.execCommand("copy");flash(label+" copiado");}catch(_){flash("Não consegui copiar. Tente pelo computador.");}}
+}
+function flash(m){$("toast").textContent=m;clearTimeout(flash.t);flash.t=setTimeout(()=>$("toast").textContent="",2500);}
+function renderAll(){renderPerfis();renderItens();renderSwitch();update();}
+/* ---------- GitHub: carregar e publicar em 1 commit ---------- */
+function ghSalvarCfg(){ try{ localStorage.setItem("nfc-gh",JSON.stringify(GH)); }catch(e){} $("ghUrl").textContent=urlDe(S.perfis[0]); }
+["Owner","Repo","Token"].forEach(k=>{ const el=$("gh"+k); el.value=GH[k.toLowerCase()]||""; el.addEventListener("change",()=>{ GH[k.toLowerCase()]=el.value.trim(); ghSalvarCfg(); renderPub(); }); });
+function ghMsg(m){ $("ghStatus").textContent=m; }
+async function gh(path,opt={}){
+  const r=await fetch("https://api.github.com"+path,{...opt,headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+GH.token,"X-GitHub-Api-Version":"2022-11-28",...(opt.body?{"Content-Type":"application/json"}:{})}});
+  if(!r.ok){ const t=await r.text().catch(()=>""); const err=new Error(r.status+" "+t.slice(0,160)); err.status=r.status; throw err; }
+  return r.status===204?null:r.json();
+}
+const ghRepo=()=>"/repos/"+encodeURIComponent(GH.owner)+"/"+encodeURIComponent(GH.repo);
+function ghErro(e){ if(e.status===401) return "A chave não funcionou. Confira se copiou inteira e se não expirou.";
+  if(e.status===403) return "A chave não tem permissão de escrita neste repositório (ou ainda não foi aprovada na organização).";
+  if(e.status===404) return "Não achei o repositório. Confira o nome e se a chave tem acesso a ele.";
+  if(e.status===409) return "O repositório está vazio. Crie-o com um README e tente de novo.";
+  return "Não deu certo: "+e.message; }
+function b64utf8(b64){ const bin=atob(b64.replace(/\n/g,"")); return new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0))); }
+$("ghLoad").onclick=async()=>{ if(!GH.owner||!GH.repo||!GH.token){ ghMsg("Preencha organização, repositório e chave."); return; }
+  ghMsg("Carregando…");
+  try{ const f=await gh(ghRepo()+"/contents/"+(dir(pasta(),"cartao.json")||"cartao.json"));
+    const c=JSON.parse(b64utf8(f.content)); salvarAgora(); abrir(c); salvarAgora(); ghMsg("Carregado do GitHub ✓"); }
+  catch(e){ ghMsg(e.status===404?"Ainda não existe cartão salvo neste repositório. Preencha e publique.":ghErro(e)); } };
+$("ghPub").onclick=async()=>{ if(!GH.owner||!GH.repo||!GH.token){ ghMsg("Preencha organização, repositório e chave."); return; }
+  const btn=$("ghPub"); btn.disabled=true; ghMsg("Publicando…");
+  try{
+    const arq=[]; const pn=slug(S.painel||"painel")||"painel";
+    S.perfis.forEach(p=>{ const d=dir(pasta(),p.pasta); arq.push([dir(d,"index.html"),build(p)]); arq.push([dir(d,vcfNome()),vcf(p)]); });
+    arq.push([dir(pasta(),pn,"index.html"),buildPainel()]);
+    const copia=JSON.parse(JSON.stringify(S)); delete copia._novo; arq.push([dir(pasta(),"cartao.json"),JSON.stringify(copia,null,1)]);
+    const ref=await gh(ghRepo()+"/git/ref/heads/main"), base=ref.object.sha;
+    const com=await gh(ghRepo()+"/git/commits/"+base);
+    const tree=await gh(ghRepo()+"/git/trees",{method:"POST",body:JSON.stringify({base_tree:com.tree.sha,tree:arq.map(([path,content])=>({path,mode:"100644",type:"blob",content}))})});
+    const novo=await gh(ghRepo()+"/git/commits",{method:"POST",body:JSON.stringify({message:"Atualiza cartão "+(S.nome||""),tree:tree.sha,parents:[base]})});
+    await gh(ghRepo()+"/git/refs/heads/main",{method:"PATCH",body:JSON.stringify({sha:novo.sha})});
+    ghMsg("Publicado ✓ Em 1 a 2 minutos o cartão atualiza.");
+  }catch(e){ ghMsg(ghErro(e)); }
+  btn.disabled=false; };
+if(MODO!=="github"){ $("ghSec").hidden=true; $("ghNote").hidden=false; }
+
+/* ---------- Cartões salvos (por pessoa) ---------- */
+function renderSel(){ const s=$("pessoaSel"); const ids=Object.keys(CARTOES); if(!CARTOES[S.id]) CARTOES[S.id]=S;
+  s.innerHTML=Object.values(CARTOES).sort((a,b)=>(a.nome||"").localeCompare(b.nome||"")).map(c=>`<option value="${c.id}"></option>`).join("");
+  [...s.options].forEach(o=>o.textContent=CARTOES[o.value].nome||"Sem nome"); s.value=S.id; }
+function abrir(c){ S=normaliza(structuredClone(c)); CARTOES[S.id]=S; LAST[S.id]=JSON.stringify(S); atual=S.perfis[0].id; preencher(); renderSel(); renderAll(); }
+$("pessoaSel").onchange=e=>{ salvarAgora(); abrir(CARTOES[e.target.value]); };
+$("novo").onclick=()=>{ salvarAgora(); abrir(cartaoVazio()); salvarAgora(); };
+$("duplicar").onclick=()=>{ salvarAgora(); const c=structuredClone(S); c.id=novoId(); c.nome=(S.nome||"")+" (cópia)"; c.pasta=(S.pasta||"")+"copia"; abrir(c); salvarAgora(); };
+$("excluir").onclick=()=>{ $("excNome").textContent=S.nome||"sem nome"; $("confirmaExc").hidden=false; };
+$("excNao").onclick=()=>{ $("confirmaExc").hidden=true; };
+$("excSim").onclick=async()=>{ $("confirmaExc").hidden=true; const id=S.id; delete CARTOES[id];
+  try{ if(DB) await DB.doc("cartoes/"+id).delete(); }catch(e){}
+  guardarLocal(); const resto=Object.values(CARTOES); abrir(resto[0]||cartaoVazio()); status("Cartão excluído."); };
+function status(m){ $("status").textContent=m; }
+function guardarLocal(){ try{ const o={}; for(const k in CARTOES) if(!CARTOES[k]._novo) o[k]=CARTOES[k]; localStorage.setItem("nfc-cartoes",JSON.stringify(o)); }catch(e){} }
+let tSalvar, salvando=false, pendente=false;
+const LAST={};
+function agendarSalvar(){ const j=JSON.stringify(S); if(LAST[S.id]===j) return; delete S._novo; CARTOES[S.id]=S; guardarLocal(); status("Alterações não salvas…"); clearTimeout(tSalvar); tSalvar=setTimeout(salvarAgora,1200); }
+async function salvarAgora(){ clearTimeout(tSalvar); CARTOES[S.id]=S; guardarLocal();
+  if(!DB){ status("Salvo neste navegador."); return; }
+  if(salvando){ pendente=true; return; } salvando=true; delete S._novo; const doc=JSON.parse(JSON.stringify(S)); LAST[S.id]=JSON.stringify(S);
+  try{ await DB.doc("cartoes/"+doc.id).set(doc); status("Salvo ✓"); }
+  catch(e){ status(e&&e.code==="invalid_argument"?"Não salvou: o cartão ficou grande demais. Use capa ou logo menores.":"Não consegui salvar agora. Tente de novo em instantes."); }
+  salvando=false; if(pendente){ pendente=false; salvarAgora(); } }
+(function iniciar(){
+  try{ CARTOES=JSON.parse(localStorage.getItem("nfc-cartoes"))||{}; }catch(e){ CARTOES={}; }
+  const locais=Object.values(CARTOES); abrir(locais[0]||Object.assign(cartaoVazio(),{_novo:true})); status("Procurando cartões salvos…");
+  const timer=setTimeout(()=>status("Sem conexão com o armazenamento. Salvando só neste navegador."),10000);
+  (async()=>{ try{
+    const db=window.claude&&await window.claude.use("db"); if(!db){ clearTimeout(timer); status("Salvando só neste navegador."); return; }
+    DB=db; const snap=await db.collection("cartoes").get(); clearTimeout(timer);
+    const remotos={}; snap.docs.forEach(d=>{ const v=d.data(); if(v&&v.id) remotos[v.id]=v; });
+    if(Object.keys(remotos).length){ for(const k in CARTOES) if(CARTOES[k]._novo) delete CARTOES[k]; CARTOES={...CARTOES,...remotos}; const atualId=S.id; abrir(remotos[atualId]||Object.values(remotos)[0]); status("Cartões carregados ✓"); }
+    else status("Nenhum cartão salvo ainda. Preencha e ele salva sozinho.");
+  }catch(e){ clearTimeout(timer); status("Não consegui carregar os cartões salvos. Salvando só neste navegador."); } })();
+})();
+</script>
+</body></html>
